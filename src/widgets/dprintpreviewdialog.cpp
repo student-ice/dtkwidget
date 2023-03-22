@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2022 UnionTech Software Technology Co., Ltd.
+// SPDX-FileCopyrightText: 2022 - 2023 UnionTech Software Technology Co., Ltd.
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
@@ -1042,7 +1042,7 @@ void DPrintPreviewDialogPrivate::initconnections()
 
     QObject::connect(advanceBtn, &QPushButton::clicked, q, [this] { this->showadvancesetting(); });
     QObject::connect(printDeviceCombo, SIGNAL(currentIndexChanged(int)), q, SLOT(_q_printerChanged(int)));
-    QObject::connect(cancelBtn, &DPushButton::clicked, q, &DPrintPreviewDialog::close);
+    QObject::connect(cancelBtn, &DPushButton::clicked, q, &DPrintPreviewDialog::reject);
     QObject::connect(pageRangeCombo, SIGNAL(currentIndexChanged(int)), q, SLOT(_q_pageRangeChanged(int)));
     QObject::connect(marginsCombo, SIGNAL(currentIndexChanged(int)), q, SLOT(_q_pageMarginChanged(int)));
     QObject::connect(printBtn, SIGNAL(clicked(bool)), q, SLOT(_q_startPrint(bool)));
@@ -1510,6 +1510,9 @@ void DPrintPreviewDialogPrivate::updateSubControlSettings(DPrintPreviewSettingIn
 {
     DPrintPreviewSettingInfo *info = settingHelper->loadInfo(setting);
     settingHelper->updateSettingInfo(info);
+    if (info) {
+        delete info;
+    }
 }
 
 /*!
@@ -1626,10 +1629,8 @@ void DPrintPreviewDialogPrivate::_q_printerChanged(int index)
 {
     Q_Q(DPrintPreviewDialog);
     QString lastPaperSize = paperSizeCombo->currentText();
-    QString lastColormode = colorModeCombo->currentText();
     paperSizeCombo->clear();
     paperSizeCombo->blockSignals(true);
-    colorModeCombo->blockSignals(true);
     QString currentName = printDeviceCombo->itemText(index);
     if (isActualPrinter(currentName)) {
         //actual printer
@@ -1650,36 +1651,36 @@ void DPrintPreviewDialogPrivate::_q_printerChanged(int index)
         QPlatformPrinterSupport *ps = QPlatformPrinterSupportPlugin::get();
         QPrintDevice currentDevice = ps->createPrintDevice(printDeviceCombo->currentText());
         colorModeCombo->clear();
-        if (!currentDevice.supportedColorModes().contains(QPrint::Color)) {
-            colorModeCombo->blockSignals(false);
-            colorModeCombo->addItem(qApp->translate("DPrintPreviewDialogPrivate", "Grayscale"));
-            updateSubControlSettings(DPrintPreviewSettingInfo::PS_ColorMode);
-            supportedColorMode = false;
-            settingHelper->setSubControlEnabled(DPrintPreviewSettingInterface::SC_Watermark_TextColor, false);
-            waterColor = QColor("#6f6f6f");
-            _q_selectColorButton(waterColor);
-            pickColorWidget->convertColor(waterColor);
-            pickColorWidget->setRgbEdit(waterColor);
-        } else {
+        supportedColorMode = false;
+        if (currentDevice.supportedColorModes().contains(QPrint::Color)) {
             if (!isInited) {
                 waterColor = QColor("#6f6f6f");
                 _q_selectColorButton(waterColor);
                 pickColorWidget->convertColor(waterColor);
                 pickColorWidget->setRgbEdit(waterColor);
             }
-
-            colorModeCombo->addItems(QStringList() << qApp->translate("DPrintPreviewDialogPrivate", "Color") << qApp->translate("DPrintPreviewDialogPrivate", "Grayscale"));
-            updateSubControlSettings(DPrintPreviewSettingInfo::PS_ColorMode);
+            colorModeCombo->blockSignals(true);
+            colorModeCombo->addItem(qApp->translate("DPrintPreviewDialogPrivate", "Color"));
             colorModeCombo->blockSignals(false);
-            if (colorModeCombo->currentText() == lastColormode) {
-                colorModeCombo->setCurrentText(qApp->translate("DPrintPreviewDialogPrivate", "Color"));
-                supportedColorMode = true;
-            } else {
-                colorModeCombo->setCurrentText(qApp->translate("DPrintPreviewDialogPrivate", "Grayscale"));
-                supportedColorMode = false;
-            }
-            if (colorModeCombo->currentText() == qApp->translate("DPrintPreviewDialogPrivate", "Color"))
-                settingHelper->setSubControlEnabled(DPrintPreviewSettingInterface::SC_Watermark_TextColor, true);
+            updateSubControlSettings(DPrintPreviewSettingInfo::PS_ColorMode);
+            supportedColorMode = true;
+        }
+        if (currentDevice.supportedColorModes().contains(QPrint::GrayScale)) {
+            colorModeCombo->blockSignals(true);
+            colorModeCombo->addItem(qApp->translate("DPrintPreviewDialogPrivate", "Grayscale"));
+            colorModeCombo->blockSignals(false);
+            updateSubControlSettings(DPrintPreviewSettingInfo::PS_ColorMode);
+            waterColor = QColor("#6f6f6f");
+            _q_selectColorButton(waterColor);
+            pickColorWidget->convertColor(waterColor);
+            pickColorWidget->setRgbEdit(waterColor);
+        }
+        if (supportedColorMode) {
+            colorModeCombo->setCurrentText(qApp->translate("DPrintPreviewDialogPrivate", "Color"));
+            settingHelper->setSubControlEnabled(DPrintPreviewSettingInterface::SC_Watermark_TextColor, true);
+        } else {
+            colorModeCombo->setCurrentText(qApp->translate("DPrintPreviewDialogPrivate", "Grayscale"));
+            settingHelper->setSubControlEnabled(DPrintPreviewSettingInterface::SC_Watermark_TextColor, false);
         }
     } else {
         //pdf
@@ -2370,7 +2371,7 @@ void DPrintPreviewDialogPrivate::_q_startPrint(bool clicked)
 
     pview->print();
 
-    q->done(0);
+    q->accept();
 }
 
 void DPrintPreviewDialogPrivate::pageRangeError(TipsNum tipNum)
@@ -2645,6 +2646,18 @@ bool DPrintPreviewDialog::isAsynPreview() const
     return d->pview->isAsynPreview();
 }
 
+DPrintPreviewSettingInfo *DPrintPreviewDialog::createDialogSettingInfo(DPrintPreviewSettingInfo::SettingType type)
+{
+    Q_D(DPrintPreviewDialog);
+    return d->settingHelper->loadInfo(type, true);
+}
+
+void DPrintPreviewDialog::updateDialogSettingInfo(DPrintPreviewSettingInfo *info)
+{
+    Q_D(DPrintPreviewDialog);
+    d->settingHelper->updateSettingInfo(info);
+}
+
 void DPrintPreviewDialog::resizeEvent(QResizeEvent *event)
 {
     Q_UNUSED(event);
@@ -2682,10 +2695,12 @@ PreviewSettingsPluginHelper::PreviewSettingsPluginHelper(DPrintPreviewDialogPriv
 {
 }
 
-DPrintPreviewSettingInfo *PreviewSettingsPluginHelper::loadInfo(DPrintPreviewSettingInfo::SettingType type)
+DPrintPreviewSettingInfo *PreviewSettingsPluginHelper::loadInfo(DPrintPreviewSettingInfo::SettingType type, bool manual)
 {
-    if (!m_currentInterface)
+    // Apps can manually get the current print dialog settings.
+    if (!manual && !m_currentInterface) {
         return nullptr;
+    }
 
     DPrintPreviewSettingInfo *info = nullptr;
     switch (type) {
@@ -2841,7 +2856,8 @@ DPrintPreviewSettingInfo *PreviewSettingsPluginHelper::loadInfo(DPrintPreviewSet
         break;
     }
 
-    if (!info)
+    // Apps can get setting info without the print plugin, otherwise need to be filter by plugin.
+    if (!info || !m_currentInterface)
         return info;
 
     if (m_currentInterface->settingFilter(d->settingHelper->m_printSettingData, info))

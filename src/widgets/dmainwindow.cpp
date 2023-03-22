@@ -139,15 +139,6 @@ void DMainWindowPrivate::_q_autoShowFeatureDialog()
     D_QC(DMainWindow);
     if (q->windowHandle()->isActive()) {
         qApp->featureDisplayDialog()->show();
-        const QPoint pos = q->pos();
-        QRect rect;
-        for (QScreen *screen : qApp->screens()) {
-            if (screen->geometry().contains(pos)) {
-                rect = screen->geometry();
-                break;
-            }
-        }
-        qApp->featureDisplayDialog()->moveToCenterByRect(rect);
         q->disconnect(q->windowHandle(), SIGNAL(activeChanged()), q, SLOT(_q_autoShowFeatureDialog()));
     }
 }
@@ -217,9 +208,8 @@ void DMainWindow::setSidebarWidget(QWidget *widget)
         contentAction->setVisible(false);
         addToolBar(Qt::LeftToolBarArea, tb);
         widget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-        QWidgetAction *action = static_cast<QWidgetAction *>(tb->addWidget(widget));
+        tb->addWidget(widget);
         widget->resize(tb->size());
-        qInfo() << "actionGeometry" << tb->actionGeometry(action);
 
         connect(d->sidebarHelper, &DSidebarHelper::widthChanged, tb, &QToolBar::setFixedWidth);
         connect(d->sidebarHelper, &DSidebarHelper::expandChanged, this, [tb, d] (bool expanded) {
@@ -243,6 +233,7 @@ int DMainWindow::sidebarWidth() const
     D_DC(DMainWindow);
     if (d->sidebarHelper)
         return d->sidebarHelper->width();
+    return 0;
 }
 
 void DMainWindow::setSidebarWidth(int width)
@@ -254,9 +245,15 @@ void DMainWindow::setSidebarWidth(int width)
 
 bool DMainWindow::sidebarVisble() const
 {
+    return sidebarVisible();
+}
+
+bool DMainWindow::sidebarVisible() const
+{
     D_DC(DMainWindow);
     if (d->sidebarHelper)
-        return d->sidebarHelper->visble();
+        return d->sidebarHelper->visible();
+    return false;
 }
 
 void DMainWindow::setSidebarVisible(bool visible)
@@ -271,6 +268,7 @@ bool DMainWindow::sidebarExpanded() const
     D_DC(DMainWindow);
     if (d->sidebarHelper)
         return d->sidebarHelper->expanded();
+    return false;
 }
 
 void DMainWindow::setSidebarExpanded(bool expended)
@@ -806,7 +804,6 @@ void DMainWindow::resizeEvent(QResizeEvent *event)
 
     if (sidebarWidget()) {
         sidebarWidget()->resize(d->tb->size());
-        qInfo() << "sidebarWidget()->height" << sidebarWidget()->height() << d->tb->size();
     }
     return QMainWindow::resizeEvent(event);
 }

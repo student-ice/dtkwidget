@@ -1257,28 +1257,20 @@ void DTitlebar::setSidebarHelper(DSidebarHelper *helper)
         d->sidebarBackgroundWidget->lower();
         d->leftLayout->addWidget(d->expandButton, 0, Qt::AlignLeft);
         connect(d->expandButton, &DIconButton::clicked, [this, d] (bool isExpanded) {
-            d->sidebarBackgroundWidget->setVisible(isExpanded);
             d->sidebarHelper->setExpanded(isExpanded);
             int x = isExpanded ? d->sidebarHelper->width() : 0;
             d->separator->move(x, height() - d->separator->height());
         });
-        connect(d->sidebarHelper, &DSidebarHelper::widthChanged, this, [d] (int width) {
-            d->sidebarBackgroundWidget->setFixedWidth(width);
-        });
     }
 
     connect(helper, &DSidebarHelper::visibleChanged, this, [this](bool visible){
-        qInfo() << "visibleChanged" << visible;
         d_func()->expandButton->setVisible(visible);
     });
-    connect(helper, &DSidebarHelper::expandChanged, this, [](bool expanded){
-        qInfo() << "expandChanged" << expanded;
+    connect(helper, &DSidebarHelper::expandChanged, this, [this](bool isExpanded){
+        d_func()->sidebarBackgroundWidget->setVisible(isExpanded);
     });
-    connect(helper, &DSidebarHelper::backgroundColorChanged, this, [](QColor backgroundColor){
-        qInfo() << "backgroundColorChanged" << backgroundColor.name(QColor::NameFormat::HexArgb);
-    });
-    connect(helper, &DSidebarHelper::widthChanged, this, [](int width){
-        qInfo() << "widthChanged" << width;
+    connect(helper, &DSidebarHelper::widthChanged, this, [this](int width){
+        d_func()->sidebarBackgroundWidget->setFixedWidth(width);
     });
 
 }

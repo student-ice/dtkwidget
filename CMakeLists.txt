@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 set(VERSION
-    "5.6.4"
+    "5.6.8"
     CACHE STRING "define project version"
 )
 
@@ -123,11 +123,14 @@ if(BUILD_PLUGINS)
 endif()
 
 set(BUILD_DOCS
-    ON
+    OFF
     CACHE BOOL "Generate doxygen-based documentation"
 )
 
 if(BUILD_DOCS)
+    message("===================================")
+    message("     You can build docs  now       ")
+    message("===================================")
     add_subdirectory(docs)
 endif()
 

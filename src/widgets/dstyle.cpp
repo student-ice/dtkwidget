@@ -1456,7 +1456,8 @@ void DStyle::drawControl(const QStyle *style, DStyle::ControlElement ce, const Q
             DStyleHelper dstyle(style);
             dstyle.drawControl(CE_ButtonBoxButtonBevel, btn, p, w);
             DStyleOptionButton subopt = *btn;
-            subopt.dciIcon = btn->dciIcon;
+            if (btn->features & DStyleOptionButton::HasDciIcon)
+                subopt.dciIcon = btn->dciIcon;
             subopt.rect = dstyle.subElementRect(SE_ButtonBoxButtonContents, btn, w);
             dstyle.drawControl(CE_ButtonBoxButtonLabel, &subopt, p, w);
             if ((btn->state & State_HasFocus)) {
@@ -1611,7 +1612,7 @@ int DStyle::pixelMetric(const QStyle *style, DStyle::PixelMetric m, const QStyle
         return 12;
     }
     case PM_SwitchButtonHandleWidth:
-        return 30;
+        return DSizeModeHelper::element(24, 30);
     case PM_SwithcButtonHandleHeight:
         return DSizeModeHelper::element(20, 24);
     case PM_FloatingWidgetRadius: {
@@ -2141,8 +2142,9 @@ int DStyle::pixelMetric(QStyle::PixelMetric m, const QStyleOption *opt, const QW
     case PM_MenuDesktopFrameWidth:
         return 0;
     case PM_ButtonMargin:
+        return 10;
     case PM_DefaultChildMargin:
-        return DSizeModeHelper::element(pixelMetric(PM_FrameRadius, opt, widget) / 2, pixelMetric(PM_FrameRadius, opt, widget));
+        return DSizeModeHelper::element(pixelMetric(PM_FrameRadius, opt, widget), pixelMetric(PM_FrameRadius, opt, widget));
     case PM_DefaultFrameWidth:
         return 1;
     case PM_DefaultLayoutSpacing:
@@ -2185,6 +2187,10 @@ int DStyle::pixelMetric(QStyle::PixelMetric m, const QStyleOption *opt, const QW
         return 32;
     case PM_ScrollView_ScrollBarOverlap:
         return true;
+    case PM_ToolBarIconSize:
+        return 16;
+    case PM_MenuButtonIndicator:
+        return DSizeModeHelper::element(8, QCommonStyle::pixelMetric(m, opt, widget));
     default:
         break;
     }
